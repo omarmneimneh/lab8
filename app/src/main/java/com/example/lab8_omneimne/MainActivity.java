@@ -2,14 +2,13 @@ package com.example.lab8_omneimne;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.content.Intent;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -22,15 +21,14 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 
 import javax.net.ssl.HttpsURLConnection;
 
 public class MainActivity extends AppCompatActivity {
 
     ListView dataList;
+
     private ArrayAdapter<String> adapter;
-    private ArrayList<String> latLongList = new ArrayList<>();
 
 
     @Override
@@ -42,24 +40,15 @@ public class MainActivity extends AppCompatActivity {
 
         dataList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String latlonginfo = latLongList.get(position);
-
-                Uri loc = Uri.parse("geo:0,0?q=" + latlonginfo + "&z=3");
-
-                Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setData(loc);
-
-                if (intent.resolveActivity(getPackageManager()) != null) {
-                    startActivity(intent);
-                } else {
-                    Toast.makeText(getApplicationContext(), "No map application found.", Toast.LENGTH_SHORT).show();
-                }
+                String data = adapter.getItem(position);
+                Toast.makeText(getApplicationContext(),  data, Toast.LENGTH_LONG).show();
             }
         });
         dataList.setAdapter(adapter);
 
         new HttpsGetTask().execute("https://mason.gmu.edu/~white/earthquakes.json");
     }
+
 
 
     private class HttpsGetTask extends AsyncTask<String, Void, String> {
@@ -74,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
                 InputStream inputStream;
                 if (urlConnection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                     inputStream = urlConnection.getErrorStream();
-                    return readStream(inputStream);
+                    return inputStream.toString();
                 } else {
                     inputStream = urlConnection.getInputStream();
                     return readStream(inputStream);
@@ -89,34 +78,24 @@ public class MainActivity extends AppCompatActivity {
             onFinishGetRequest(result);
         }
     }
-
     private void onFinishGetRequest(String result) {
+        //
+        //    dataTV.setText(result)Toast.makeText(getApplicationContext(),result,Toast.LENGTH_SHORT).show();
         try {
             JSONArray earthquakes = (new JSONArray(result));
             int len = earthquakes.length();
-
-            latLongList.clear();
-
             for (int i = 0;i<len;i++) {
                 JSONObject quake = earthquakes.getJSONObject(i);
-
                 String region = quake.getString("region");
+                String mag = "";
                 String occurred = quake.getString("occurred_at");
-
-                String mag = String.valueOf(quake.getDouble("mag"));
-
-                JSONObject coordsObject = quake.getJSONObject("coordinates");
-                String lat = String.valueOf(coordsObject.getDouble("latitude"));
-                String longitude = String.valueOf(coordsObject.getDouble("longitude"));
-
-                latLongList.add(lat + "," + longitude);
-
-                adapter.add(region + " (" + lat + "," + longitude + ") with magnitude " + mag
+                String lat = "";
+                String longitude = "";
+                adapter.add(region + " (" + lat + "," + longitude + ") with magnitude = " + mag
                         + " on " + occurred);
             }
             adapter.notifyDataSetChanged();
         } catch (Exception e) {
-            Toast.makeText(getApplicationContext(), "Error Parsing JSON: " + e.getMessage(), Toast.LENGTH_LONG).show();
             e.printStackTrace();
         }
 
